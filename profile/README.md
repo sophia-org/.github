@@ -22,7 +22,7 @@ Our work is hosted across several focused repositories.
                             │
                             ▼ (anonymous transactions)
                   ┌───────────────────┐
-                  │   SOPHIA ENGINE   │  <-- sophia-stack (Rust)
+                  │   SOPHIA ENGINE   │  <-- sophia (Rust)
                   └──────┬─────┬──────┘
                          │     ▲
      [ sophia_wm_v1 ]    │     │      [ sophia_shell_v1 ]
@@ -43,7 +43,7 @@ The Sophia ecosystem is divided into mechanism, protocol translation, and policy
 
 ## Core Repositories
 
-*   **[`sophia-stack`](https://github.com/sophia-org/sophia-stack):** The core display server system. Includes the unopinionated `sophia-engine`, the secure Rust-based X11 protocol translator (`sophia-x-authority`), the portal broker, and the session supervisor.
+*   **[`sophia`](https://github.com/sophia-org/sophia):** The core display server system. Includes the unopinionated `sophia-engine`, the secure Rust-based X11 protocol translator (`sophia-x-authority`), the portal broker, and the session supervisor.
 *   **[`sophia-website`](https://github.com/sophia-org/sophia-website):** The source code, technical journals, and architectural specs for our home at **[sophia.gg](https://sophia.gg)**.
 *   **[`hagia`](https://github.com/sophia-org/hagia):** The reference blind tiling window manager client. Written in Nim, it communicates over the metadata-blind `sophia_wm_v1` wire to proposal-test layout states.
 *   **[`narthex`](https://github.com/sophia-org/narthex):** Our reference confined shell interface client. It speaks `sophia_shell_v1` to reserve work-area spans and specify securely rendered status bars and panels.
