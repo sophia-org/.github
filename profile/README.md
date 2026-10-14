@@ -1,6 +1,6 @@
 # Sophia
 
-Sophia is an experimental desktop for Linux, built on an idea from Plan 9: every client gets its own view of the system, and the server checks every step it takes. Engine owns the input devices and the display. The window manager and the shell run as separate processes, so a crash in either one doesn't take your session down.
+Sophia is a secure Linux desktop inspired by Plan 9, with atomic display transactions, a namespace for every client, and a native X11 server written in Rust. Engine owns the input devices and the display. The window manager and the shell run as separate processes, so a crash in either one doesn't take your session down.
 
 X11 is a full frontend, with an X server written from scratch in Rust. Everything else talks to Sophia over one shared 9P2000.L core. Each role keeps its own endpoint, file tree and permissions; sharing the code doesn't mean sharing the permissions.
 
