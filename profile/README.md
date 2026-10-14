@@ -1,65 +1,61 @@
-# Sophia Org
+# Sophia
 
-We are building a graphical desktop environment that respects modularity, visual integrity, and user security. 
+Sophia is an experimental desktop system shaped by Plan 9: a shared file protocol, a namespace composed for each identity, and explicit grants between namespaces. Engine owns composition and physical input. Separate processes handle window layout and shell UI.
 
-Traditional display systems are monolithic. They force display drivers, rendering, spatial layouts, input routing, and shell interfaces into a single, un-sandboxed address space. If one component falters, your entire session dies.
+X11 remains a first-class frontend, with a native authority written from scratch in Rust. Sophia's native interfaces use a shared 9P2000.L core. Each role keeps its own endpoint, file tree and authority; sharing the implementation does not merge their permissions.
 
-Sophia decomposes the modern desktop. We treat the graphics stack as a visual pipeline of specialized, single-responsibility processes communicating over clean, versioned IPC boundaries. We preserve X11’s flexible application model through isolated, virtualized namespaces while establishing strict, transaction-driven visual commits.
-
-Our work is hosted across several focused repositories.
-
----
-
-## The Visual Pipeline
+## The Shape
 
 ```text
-                  [ sandboxed clients ]
-                            │
-                            ▼ (classic X11 socket)
-                  ┌───────────────────┐
-                  │ X SERVER FRONTEND │  <-- sophia-x-authority (Rust)
-                  └─────────┬─────────┘
-                            │
-                            ▼ (anonymous transactions)
-                  ┌───────────────────┐
-                  │   SOPHIA ENGINE   │  <-- sophia (Rust)
-                  └──────┬─────┬──────┘
-                         │     ▲
-     [ sophia_wm_v1 ]    │     │      [ sophia_shell_v1 ]
-    opaque layout nodes  ▼     ▼      descriptors & reservations
-                  ┌───────┐   ┌───────┐
-                  │ CODES │   │ CODES │  <-- decoupled policy edges
-                  │  WM   │   │ SHELL │      (e.g., Hagia, Narthex)
-                  └───────┘   └───────┘
+  X11 clients              9P clients: WM · shells · output
+        │                  lock · factotum · inspection · portals
+        ▼                              │
+  ┌────────────────┐          ┌────────────────────┐
+  │ X AUTHORITY    │          │ SHARED 9P CORE     │
+  │ Native Rust    │          │ 9P2000.L           │
+  │ Built from     │          │ Separate exports   │
+  │ scratch        │          │ and endpoints      │
+  └───────┬────────┘          └────────┬───────────┘
+          │     admitted transactions, │
+          │     proposals and commands │
+          └──────────────┬─────────────┘
+                         ▼
+                  SESSION OWNERS
+              admission · routing · policy
+                         │
+                         ▼
+                   SOPHIA ENGINE
+        input · scene · commits · rendering · scanout
+                         │
+                         ▼
+                     DRM / KMS
 ```
 
-The Sophia ecosystem is divided into mechanism, protocol translation, and policy:
+Engine commits window geometry and pixels together. The window manager proposes layout and focus from opaque nodes; it receives no titles, process IDs or pixels. Shells draw panels, launchers and switchers through their own admitted interfaces, with separately authorized metadata.
 
-1.  **Mechanism (The Engine):** Holds visual and input authority. It drives the hardware (KMS/DRM, libinput) and commits visual frames atomically. It has no understanding of window managers or application-level protocols.
-2.  **Translation (The Frontend):** Resolves client protocols. It translates application commands into anonymous surface transactions for the Engine.
-3.  **Policy (WM & Shell):** Legislates layout and interface. Policy processes are completely decoupled, run in their own address spaces, and operate on opaque layout nodes without seeing application metadata or titles.
+Administration and the metadata broker still await migration from the legacy socket envelope. The 9P application authority and a common protocol-authority contract are also planned; they are not shown as completed paths above.
 
----
+## What Sophia Borrows from Plan 9
+
+A namespace describes what an admitted connection can reach. Session composes its socket directory and discovery file from trusted policy. Each endpoint serves its own tree and checks the client's authority. Authenticated attach fixes identity for the admitted launch paths; a path, attach name or open handle cannot create permission. X11 retains its own admission checks.
+
+Roles share file operations, not one record format. Small controls and discovery can use text; window-manager and shell traffic keeps compact binary records. Core clients connect directly over 9P. Kernel mounts are not an authority mechanism, and Sophia does not adopt Plan 9's draw protocol.
+
+Portals authorize transfers between namespaces. The decision owner checks bounded facts; the recipient's frontend executes the transfer. A 9P recipient receives a grant-bound object in its tree. Revocation makes retained handles stale. X recipients use X semantics. Descriptors belong on a separate channel, never inside the 9P stream.
+
+Capture is the first output bind: a frame record and bounded screenshot bytes, authorized for one named output. It is implemented but remains under physical and performance qualification. Capture grants imply no permission to inject input. Agents use the same admitted interfaces as other clients; Sophia adds no agent-specific authority.
+
+Wayland is possible but off the roadmap. A third party could build a compatibility layer as a client of the planned 9P application authority, carrying its clients as separate identities. That extension path depends on the application authority landing.
 
 ## Core Repositories
 
-*   **[`sophia`](https://github.com/sophia-org/sophia):** The core display server system. Includes the unopinionated `sophia-engine`, the secure Rust-based X11 protocol translator (`sophia-x-authority`), the portal broker, and the session supervisor. See the [Strategic Roadmap](https://github.com/sophia-org/sophia/blob/master/docs/strategic-roadmap.md) for the planned evolution from monorepo incubation to autonomous satellite repositories.
-*   **[`sophia-website`](https://github.com/sophia-org/sophia-website):** The source code, technical journals, and architectural specs for our home at **[sophia.gg](https://sophia.gg)**.
-*   **[`hagia`](https://github.com/sophia-org/hagia):** The reference blind tiling window manager client. Written in Nim, it communicates over the metadata-blind `sophia_wm_v1` wire to proposal-test layout states.
-*   **[`narthex`](https://github.com/sophia-org/narthex):** Our reference confined shell interface client. It speaks `sophia_shell_v1` to reserve work-area spans and specify securely rendered status bars and panels.
+- **[sophia](https://github.com/sophia-org/sophia):** Engine, the Rust X11 authority, the shared 9P core, portal services and Session supervision. The [roadmap](https://github.com/sophia-org/sophia/blob/master/docs/strategic-roadmap.md) tracks the remaining work.
+- **[sophia-website](https://github.com/sophia-org/sophia-website):** The source for [sophia.gg](https://sophia.gg), its documentation and development posts.
+- **[hagia](https://github.com/sophia-org/hagia):** The reference blind tiling window manager, written in Nim and using Sophia's WM files over 9P.
+- **[narthex](https://github.com/sophia-org/narthex):** A reference descriptor shell, using Sophia's shell files to describe panels and reserve work areas.
 
----
+## Build on Sophia
 
-## Our Engineering Philosophy
+Window managers and shells run outside Engine. Their protocols let clients use languages other than Rust without taking over composition or physical input. If a supervised WM or shell exits, Engine retains the committed scene while Session handles recovery.
 
-We design and implement our components under a few unyielding rules:
-
-*   **The One Rule of Confinement:** Mechanism (Engine) owns composed pixels. Policy clients (WM and Shell) decide layout, but they draw nothing, or they draw blind. Portals brokered by user consent are the only way data crosses isolated namespace boundaries.
-*   **Fault Isolation:** If a policy edge (the Window Manager or Shell) crashes, the display server continues to run, holding active windows in place on the display, while the session supervisor restarts the policy client instantly.
-*   **Ecosystem Pluralism:** While the unyielding visual kernel is written in Rust for memory safety, you can build window managers or shell panels in Nim, Zig, Python, Rust, or C simply by speaking our versioned IPC wire protocols.
-
----
-
-## Get Involved
-
-We invite you to explore our documentation at [sophia.gg/docs](https://sophia.gg/docs/), read our [Strategic Roadmap](https://github.com/sophia-org/sophia/blob/master/docs/strategic-roadmap.md), download the repositories, and help us refine this modular architecture.
+Start with [Building on Sophia](https://sophia.gg/docs/) and the [architecture](https://sophia.gg/docs/architecture/). The [one-core decision](https://github.com/sophia-org/sophia/blob/master/docs/notes/decisions/zsx0tk4k-serve-every-public-role-from-one-9p-core-with-namespaces-as-composed-trees-and-portals-as-binds.md) explains the direction; current implementation and acceptance remain separate from that target.
