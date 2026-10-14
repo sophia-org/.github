@@ -1,10 +1,10 @@
 # Sophia
 
-Sophia is an experimental desktop system shaped by Plan 9: a shared file protocol, a namespace composed for each identity, and explicit grants between namespaces. Engine owns composition and physical input. Separate processes handle window layout and shell UI.
+Sophia is an experimental desktop for Linux, built on an idea from Plan 9: every client gets its own view of the system, and the server checks every step it takes. Engine owns the input devices and the display. The window manager and the shell run as separate processes, so a crash in either one doesn't take your session down.
 
-X11 remains a first-class frontend, with a native authority written from scratch in Rust. Sophia's native interfaces use a shared 9P2000.L core. Each role keeps its own endpoint, file tree and authority; sharing the implementation does not merge their permissions.
+X11 is a full frontend, with an X server written from scratch in Rust. Everything else talks to Sophia over one shared 9P2000.L core. Each role keeps its own endpoint, file tree and permissions; sharing the code doesn't mean sharing the permissions.
 
-## The Shape
+## The shape
 
 ```text
   X11 clients              9P clients: WM · shells · output
@@ -31,31 +31,31 @@ X11 remains a first-class frontend, with a native authority written from scratch
                      DRM / KMS
 ```
 
-Engine commits window geometry and pixels together. The window manager proposes layout and focus from opaque nodes; it receives no titles, process IDs or pixels. Shells draw panels, launchers and switchers through their own admitted interfaces, with separately authorized metadata.
+Engine commits each window's geometry and pixels together. The window manager proposes layout and focus from anonymous nodes and never sees titles, process IDs or pixels. Shells draw panels, launchers and switchers through their own interfaces, and they get window metadata only with separate permission.
 
-Administration and the metadata broker still await migration from the legacy socket envelope. The 9P application authority and a common protocol-authority contract are also planned; they are not shown as completed paths above.
+Administration and the metadata broker still use the old socket protocol. The 9P application frontend and the shared contract between frontends and Engine are planned, not built; the drawing doesn't show them as finished.
 
-## What Sophia Borrows from Plan 9
+## What Sophia borrows from Plan 9
 
-A namespace describes what an admitted connection can reach. Session composes its socket directory and discovery file from trusted policy. Each endpoint serves its own tree and checks the client's authority. Authenticated attach fixes identity for the admitted launch paths; a path, attach name or open handle cannot create permission. X11 retains its own admission checks.
+A namespace is everything a connection can reach. The session builds each client's socket directory and discovery file from trusted policy, and every endpoint serves its own tree and checks what the client may do. A client proves its identity when it connects, and that identity is fixed for the connection. Knowing a path, an attach name or holding an open file never grants permission by itself. X11 keeps its own admission checks.
 
-Roles share file operations, not one record format. Small controls and discovery can use text; window-manager and shell traffic keeps compact binary records. Core clients connect directly over 9P. Kernel mounts are not an authority mechanism, and Sophia does not adopt Plan 9's draw protocol.
+The roles share file operations, not a record format. Small commands and discovery use lines of text; window-manager and shell traffic keeps compact binary records. Clients speak 9P directly. Kernel mounts aren't a security boundary, and Sophia doesn't use Plan 9's draw protocol.
 
-Portals authorize transfers between namespaces. The decision owner checks bounded facts; the recipient's frontend executes the transfer. A 9P recipient receives a grant-bound object in its tree. Revocation makes retained handles stale. X recipients use X semantics. Descriptors belong on a separate channel, never inside the 9P stream.
+Portals are the only way between namespaces. The portal service decides whether a transfer may happen, and the receiving frontend carries it out. A 9P client gets one object bound into its tree, and revoking the grant makes its open files stale. An X client gets ordinary X semantics. File descriptors travel on a separate channel, never inside the 9P stream.
 
-Capture is the first output bind: a frame record and bounded screenshot bytes, authorized for one named output. It is implemented but remains under physical and performance qualification. Capture grants imply no permission to inject input. Agents use the same admitted interfaces as other clients; Sophia adds no agent-specific authority.
+Screen capture is the first portal: a frame record and the screenshot bytes for one named output. It works on both physical displays today, and locking the screen or changing a display revokes old grants on time. Mirrored displays are still being tested. A capture grant never lets anyone inject input. Agents use the same interfaces as every other client; Sophia gives them no special powers.
 
-Wayland is possible but off the roadmap. A third party could build a compatibility layer as a client of the planned 9P application authority, carrying its clients as separate identities. That extension path depends on the application authority landing.
+Wayland is possible but off the roadmap. Someone could write a compatibility layer as a client of the planned 9P application frontend, once that frontend exists.
 
-## Core Repositories
+## Repositories
 
-- **[sophia](https://github.com/sophia-org/sophia):** Engine, the Rust X11 authority, the shared 9P core, portal services and Session supervision. The [roadmap](https://github.com/sophia-org/sophia/blob/master/docs/strategic-roadmap.md) tracks the remaining work.
-- **[sophia-website](https://github.com/sophia-org/sophia-website):** The source for [sophia.gg](https://sophia.gg), its documentation and development posts.
-- **[hagia](https://github.com/sophia-org/hagia):** The reference blind tiling window manager, written in Nim and using Sophia's WM files over 9P.
-- **[narthex](https://github.com/sophia-org/narthex):** A reference descriptor shell, using Sophia's shell files to describe panels and reserve work areas.
+- **[sophia](https://github.com/sophia-org/sophia):** Engine, the Rust X server, the shared 9P core, portals and session supervision. The [roadmap](https://github.com/sophia-org/sophia/blob/master/docs/strategic-roadmap.md) tracks the remaining work.
+- **[sophia-website](https://github.com/sophia-org/sophia-website):** The source for [sophia.gg](https://sophia.gg), its documentation and blog.
+- **[hagia](https://github.com/sophia-org/hagia):** The reference window manager, a tiling manager written in Nim that never sees what it's tiling. It uses Sophia's window-manager files over 9P.
+- **[narthex](https://github.com/sophia-org/narthex):** A reference shell that describes panels for Engine to draw and reserves screen space through Sophia's shell files.
 
 ## Build on Sophia
 
-Window managers and shells run outside Engine. Their protocols let clients use languages other than Rust without taking over composition or physical input. If a supervised WM or shell exits, Engine retains the committed scene while Session handles recovery.
+Window managers and shells run outside Engine, so you can write them in any language without taking over composition or input. If a supervised window manager or shell exits, Engine keeps the last frame on screen while the session restarts it.
 
-Start with [Building on Sophia](https://sophia.gg/docs/) and the [architecture](https://sophia.gg/docs/architecture/). The [one-core decision](https://github.com/sophia-org/sophia/blob/master/docs/notes/decisions/zsx0tk4k-serve-every-public-role-from-one-9p-core-with-namespaces-as-composed-trees-and-portals-as-binds.md) explains the direction; current implementation and acceptance remain separate from that target.
+Start with [Building on Sophia](https://sophia.gg/docs/building-on-sophia/) and the [architecture map](https://sophia.gg/docs/architecture/). The [one-core decision](https://github.com/sophia-org/sophia/blob/master/docs/notes/decisions/zsx0tk4k-serve-every-public-role-from-one-9p-core-with-namespaces-as-composed-trees-and-portals-as-binds.md) explains where Sophia is headed; what's built today is a separate question, answered on the site's status section.
