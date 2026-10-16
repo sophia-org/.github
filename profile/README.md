@@ -20,15 +20,19 @@ X11 is a full frontend, with an X server written from scratch in Rust. Everythin
           │     proposals and commands │
           └──────────────┬─────────────┘
                          ▼
-                  SESSION OWNERS
-              admission · routing · policy
-                         │
+ ┌───────────────────────────────────────────────┐
+ │                SESSION OWNERS                 │
+ │         admission · routing · policy          │
+ └───────────────────────┬───────────────────────┘
                          ▼
-                   SOPHIA ENGINE
-        input · scene · commits · rendering · scanout
-                         │
+ ┌───────────────────────────────────────────────┐
+ │                 SOPHIA ENGINE                 │
+ │ input · scene · commits · rendering · scanout │
+ └───────────────────────┬───────────────────────┘
                          ▼
-                     DRM / KMS
+ ┌───────────────────────────────────────────────┐
+ │                   DRM / KMS                   │
+ └───────────────────────────────────────────────┘
 ```
 
 Engine commits each window's geometry and pixels together. The window manager proposes layout and focus from anonymous nodes and never sees titles, process IDs or pixels. Shells draw panels, launchers and switchers through their own interfaces, and they get window metadata only with separate permission.
